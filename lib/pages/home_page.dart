@@ -1,85 +1,99 @@
-// ignore_for_file: avoid_print
-
-import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_app_8/models/product.dart';
-import 'package:flutter_app_8/pages/product_page.dart';
-import 'package:flutter_app_8/services/product_service.dart';
-import '../components/product_card.dart';
-import '../pages/add_product_page.dart';
+import 'package:project_name/components/item.dart';
+import 'package:project_name/models/item_class.dart';
+import 'package:project_name/models/cart_item_class.dart';
+import 'package:project_name/api/api_service.dart';
 
 class HomePage extends StatefulWidget {
-  const HomePage({super.key});
+  final List<ItemClass> favorites;
+  final List<CartItemClass> basketItems;
+  final Function(ItemClass) onFavoriteToggle;
+  final Function(ItemClass) onAddToBasket;
+  final Function(ItemClass) onIncreaseQuantity;
+  final Function(ItemClass) onDecreaseQuantity;
+
+  const HomePage({
+    super.key,
+    required this.favorites,
+    required this.basketItems,
+    required this.onFavoriteToggle,
+    required this.onAddToBasket,
+    required this.onIncreaseQuantity,
+    required this.onDecreaseQuantity,
+  });
 
   @override
   _HomePageState createState() => _HomePageState();
 }
 
 class _HomePageState extends State<HomePage> {
-  List<Product> products = [];
+  final ApiService _apiService = ApiService();
+  late Future<List<ItemClass>> _itemsFuture;
 
   @override
   void initState() {
     super.initState();
-    getAllProducts();
+    _itemsFuture = _apiService.getItems();
   }
 
-  Future<void> getAllProducts() async {
-    try {
-      products = await ProductService.getProducts();
-      setState(() {});
-    } on DioException catch (e) {
-      print(e);
-    }
-  }
-
-  void toProductPage(BuildContext context, int index) async {
-    var productId = products[index].id;
-    final result = await Navigator.push(
-      context,
-      MaterialPageRoute(
-        builder: (context) => ProductPage(productId: productId),
-      ),
+  int _getItemQuantity(ItemClass item) {
+    final cartItem = widget.basketItems.firstWhere(
+      (cartItem) => cartItem.product == item,
+      orElse: () => CartItemClass(product: item, quantity: 0),
     );
-    if (result == true) {
-      await getAllProducts();
-    }
+    return cartItem.quantity;
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Товары'),
+        title: const Text('Магазин товаров'),
       ),
-      backgroundColor: Colors.white,
-      body: GridView.count(
-        padding: const EdgeInsets.fromLTRB(20, 15, 20, 25),
-        crossAxisCount: 2,
-        crossAxisSpacing: 10,
-        mainAxisSpacing: 15,
-        children: List.generate(products.length, (index) {
-          return GestureDetector(
-            onTap: () => toProductPage(context, index),
-            child: ProductCard(product: products[index]),
-          );
-        }),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: () {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (context) => AddProductPage(onAddProduct: (newItem) {
-                setState(() {
-                  products.add(newItem);
-                });
-              }),
-            ),
-          );
+      body: FutureBuilder<List<ItemClass>>(
+        future: _itemsFuture,
+        builder: (context, snapshot) {
+          if (snapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          } else if (snapshot.hasError) {
+            return Center(
+                child: Text('Ошибка загрузки товаров: ${snapshot.error}'));
+          } else if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            return const Center(child: Text('Товары отсутствуют.'));
+          } else {
+            final items = snapshot.data!;
+            return GridView.builder(
+              gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                crossAxisCount: 2,
+                childAspectRatio: 0.44,
+                crossAxisSpacing: 2,
+                mainAxisSpacing: 10,
+              ),
+              itemCount: items.length,
+              itemBuilder: (BuildContext context, int index) {
+                final item = items[index];
+                final quantity = _getItemQuantity(item);
+
+                return Padding(
+                  padding: const EdgeInsets.all(5.0),
+                  child: Item(
+                    imgLink: item.imageUrl,
+                    price: item.price,
+                    brand: item.brand,
+                    title: item.title,
+                    description: item.description,
+                    isFavorite: widget.favorites.contains(item),
+                    onFavoriteToggle: () => widget.onFavoriteToggle(item),
+                    onAddToBasket: () => widget.onAddToBasket(item),
+                    quantity: quantity,
+                    onIncreaseQuantity: () => widget.onIncreaseQuantity(item),
+                    onDecreaseQuantity: () => widget.onDecreaseQuantity(item),
+                  ),
+                );
+              },
+            );
+          }
         },
-        foregroundColor: Colors.orange,
-        child: const Icon(Icons.add),
       ),
     );
   }

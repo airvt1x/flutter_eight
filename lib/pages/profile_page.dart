@@ -1,8 +1,4 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app_8/mocks/profile.dart';
-import 'package:flutter_app_8/models/profile.dart';
-import 'package:flutter_app_8/pages/edit_profile_page.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
@@ -12,18 +8,31 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  late ProfileModel _profile;
+  final TextEditingController imgLinkController = TextEditingController();
+  final TextEditingController nameController = TextEditingController();
+  final TextEditingController emailController = TextEditingController();
+  bool isEditing = false;
 
   @override
   void initState() {
     super.initState();
-    _profile = profile;
+    imgLinkController.text =
+        'https://avatars.githubusercontent.com/u/121338834?v=4';
+    nameController.text = 'Селакович Никола';
+    emailController.text = 'selakovich.n@edu.mirea.ru';
   }
 
-  void _updateProfile(ProfileModel newProfile) {
+  @override
+  void dispose() {
+    imgLinkController.dispose();
+    nameController.dispose();
+    emailController.dispose();
+    super.dispose();
+  }
+
+  void _toggleEdit() {
     setState(() {
-      _profile = newProfile;
-      profile = newProfile;
+      isEditing = !isEditing;
     });
   }
 
@@ -31,97 +40,63 @@ class _ProfilePageState extends State<ProfilePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Center(
-          child: Text(
-            "Мой профиль",
-            style: TextStyle(
-              fontSize: 24,
-              color: Color.fromARGB(255, 48, 48, 48),
-            ),
-          ),
-        ),
-        backgroundColor: const Color.fromARGB(255, 255, 255, 255),
+        title: const Text('Мой профиль'),
       ),
-      body: Container(
-        height: MediaQuery.of(context).size.height,
-        color: const Color.fromARGB(255, 255, 255, 255),
+      body: Padding(
+        padding: const EdgeInsets.all(16.0),
         child: Center(
           child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const SizedBox(height: 40),
-              Container(
-                width: 200,
-                height: 200,
-                clipBehavior: Clip.antiAlias,
-                decoration: BoxDecoration(
-                  shape: BoxShape.circle,
-                  border: Border.all(
-                    color: const Color.fromARGB(255, 255, 255, 255),
-                    width: 12,
-                  ),
-                ),
-                child: SvgPicture.network(
-                  'https://pinia-ru.netlify.app/logo.svg',
-                  fit: BoxFit.cover,
-                  width: 12,
-                ),
+              CircleAvatar(
+                radius: 50,
+                backgroundImage: NetworkImage(imgLinkController.text),
               ),
-              const SizedBox(height: 30),
-              Text(
-                _profile.name,
-                style: const TextStyle(
-                  fontSize: 26,
-                  color: Color.fromARGB(255, 51, 51, 51),
+              const SizedBox(height: 20),
+              if (isEditing) ...[
+                TextField(
+                  controller: imgLinkController,
+                  decoration:
+                      const InputDecoration(labelText: 'Ссылка на изображение'),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 30),
-              Text(
-                _profile.email,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color.fromARGB(255, 51, 51, 51),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: nameController,
+                  decoration: const InputDecoration(labelText: 'Имя'),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 30),
-              Text(
-                _profile.phone,
-                style: const TextStyle(
-                  fontSize: 14,
-                  color: Color.fromARGB(255, 3, 3, 3),
+                const SizedBox(height: 10),
+                TextField(
+                  controller: emailController,
+                  decoration:
+                      const InputDecoration(labelText: 'Электронная почта'),
+                  textAlign: TextAlign.center,
                 ),
-              ),
-              const SizedBox(height: 30),
-              SizedBox(
-                width: 240,
-                child: ElevatedButton(
-                  onPressed: () {
-                    Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => EditProfilePage(
-                          oldProfile: _profile,
-                          onProfileCreated: (ProfileModel newProfile) {
-                            _updateProfile(newProfile);
-                          },
-                        ),
-                      ),
-                    );
-                  },
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 12),
-                    backgroundColor: const Color.fromRGBO(252, 133, 7, 1),
-                    foregroundColor: Colors.white,
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(10),
-                    ),
-                    minimumSize: const Size(0, 48),
-                  ),
-                  child: const Text(
-                    'Редактировать',
-                    style: TextStyle(fontSize: 18),
-                  ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _toggleEdit,
+                  child: const Text('Сохранить изменения'),
                 ),
-              ),
+              ] else ...[
+                Text(
+                  nameController.text,
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 10),
+                Text(
+                  emailController.text,
+                  style: const TextStyle(fontSize: 18),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 20),
+                ElevatedButton(
+                  onPressed: _toggleEdit,
+                  child: const Text('Редактировать'),
+                ),
+              ],
             ],
           ),
         ),

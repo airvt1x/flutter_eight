@@ -1,86 +1,114 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_app_8/components/basket_bottom.dart';
-import 'package:flutter_app_8/components/basket_card.dart';
-import 'package:flutter_app_8/mocks/basket_products.dart';
-import 'package:flutter_app_8/models/cart_item.dart';
-import 'package:flutter_app_8/pages/product_page.dart';
+import 'package:project_name/models/cart_item_class.dart';
+import 'package:project_name/components/basket_item.dart';
+import 'package:project_name/models/item_class.dart';
 
 class BasketPage extends StatefulWidget {
-  const BasketPage({super.key});
+  final List<CartItemClass> basketItems;
+  final Function(ItemClass, int) onQuantityChange;
+
+  const BasketPage({
+    super.key,
+    required this.basketItems,
+    required this.onQuantityChange,
+  });
 
   @override
-  State<BasketPage> createState() => _BasketPageState();
+  _BasketPageState createState() => _BasketPageState();
 }
 
 class _BasketPageState extends State<BasketPage> {
-  final List<CartItemModel> _items = items;
-  final products = [];
+  double _calculateTotalPrice() {
+    double totalPrice = 0.0;
+    for (var cartItem in widget.basketItems) {
+      totalPrice += cartItem.product.price * cartItem.quantity;
+    }
+    return totalPrice;
+  }
 
   @override
   Widget build(BuildContext context) {
+    final totalPrice = _calculateTotalPrice();
+
     return Scaffold(
-        body: Column(
-      crossAxisAlignment: CrossAxisAlignment.end,
-      children: [
-        Expanded(
-          child: ListView.builder(
-            itemCount: items.length,
-            itemBuilder: (BuildContext context, int index) {
-              var item = _items[index];
-              var product =
-                  products.firstWhere((element) => item.id == element.id);
-
-              return BasketItem(
-                item: item,
-                onTap: () {
-                  Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => ProductPage(
-                          productId: index,
+      appBar: AppBar(
+        title: const Text('Корзина'),
+      ),
+      body: widget.basketItems.isEmpty
+          ? const Center(
+              child: Text(
+                'Корзина пуста',
+                style: TextStyle(fontSize: 18),
+              ),
+            )
+          : Column(
+              children: [
+                Expanded(
+                  child: ListView.builder(
+                    itemCount: widget.basketItems.length,
+                    itemBuilder: (BuildContext context, int index) {
+                      final cartItem = widget.basketItems[index];
+                      return Dismissible(
+                        key: Key(cartItem.product.title),
+                        background: Container(
+                          color: Colors.red,
+                          alignment: Alignment.centerRight,
+                          padding: const EdgeInsets.symmetric(horizontal: 20),
+                          child: const Icon(Icons.delete, color: Colors.white),
                         ),
-                      ));
-                },
-                onCount: (int value) {
-                  setState(() {
-                    item.count = value;
-                  });
-                },
-                deleteItem: () {
-                  setState(() {
-                    items.remove(item);
-                  });
-                },
-              );
-            },
-          ),
-        ),
-        Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-          child: BasketBottom(
-            price: sumPrices(),
-            count: getCartTotalCount(),
-          ),
-        ),
-      ],
-    ));
-  }
-
-  int getCartTotalCount() {
-    int count = 0;
-
-    for (int i = 0; i < items.length; i++) {
-      count = count + items[i].count;
-    }
-    return count;
-  }
-
-  int sumPrices() {
-    int sum = 0;
-
-    for (int i = 0; i < items.length; i++) {
-      sum += items[i].cost * items[i].count;
-    }
-    return sum;
+                        onDismissed: (direction) {
+                          setState(() {
+                            widget.onQuantityChange(cartItem.product, 0);
+                          });
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                  '${cartItem.product.title} удален из корзины'),
+                            ),
+                          );
+                        },
+                        child: BasketItem(
+                          cartItem: cartItem,
+                          onIncrease: () {
+                            widget.onQuantityChange(
+                                cartItem.product, cartItem.quantity + 1);
+                          },
+                          onDecrease: () {
+                            widget.onQuantityChange(
+                                cartItem.product, cartItem.quantity - 1);
+                          },
+                        ),
+                      );
+                    },
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Text(
+                    'Общая сумма: ${totalPrice.toStringAsFixed(2)} ₽',
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+                Padding(
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 16.0, vertical: 8.0),
+                  child: SizedBox(
+                    width: double.infinity,
+                    child: ElevatedButton.icon(
+                      onPressed: () {},
+                      label: const Text('Купить'),
+                      style: ElevatedButton.styleFrom(
+                        padding: const EdgeInsets.symmetric(vertical: 15),
+                        minimumSize: const Size(double.infinity, 50),
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+    );
   }
 }
